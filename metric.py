@@ -1,3 +1,5 @@
+#coding=utf-8
+
 """
     Desc:   define metrics for triple class classification
     Author: zhpmatrix
@@ -37,6 +39,6 @@ def eval(y_true, y_pred, labels = ['好', '中', '差']):
 if __name__ == '__main__':
     
     y_true = ['差', '中', '好', '好', '中', '差', '差']
-    y_pred = ['中', '差', '好', '中', '好', '中', '差']
+    y_pred = ['差', '差', '好', '中', '好', '差', '差']
     results = eval(y_true, y_pred)
     print(results) 
