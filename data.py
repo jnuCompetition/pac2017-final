@@ -1,10 +1,16 @@
+#coding=utf-8
+
 """
     Desc:   read raw data and make preprocessing, filter outlier
     Author: zhpmatrix
 """
 
 import os
+import pickle
+import jieba
 import pandas as pd
+import numpy as np
+from gensim.models import word2vec
 
 def saveData(data, path):
     """
@@ -80,15 +86,89 @@ def readTrain(fileDir):
     data = data[data.ix[:, 1] != '银联标签']
     # Rename columns
     data.columns = [i for i in range(3)] 
+    # Delete NaN
+    data = data.dropna(axis=0, how='any')
+    data = data.reset_index(drop=True)
     saveData(data, path='../train.csv')
     return data
 
+def get_stop_words(filepath):
+    stopwords = []
+    f = open(filepath,"r")
+    while True:
+        line = f.readline()
+        if len(line) == 0:
+            break
+        line = "".join(line).strip("\n")
+        stopwords.append(line)
+    f.close()
+    return stopwords
+
+def filter_comments(cutwords,stopwords):
+    return [word for word in cutwords if word not in stopwords]
+
+def dump_data(data, filepath):
+    with open(filepath, 'wb') as f:
+        pickle.dump(data, f)
+def load_data(filepath):
+    with open(filepath, 'rb') as f:
+        data = pickle.load(f)
+    return data
+
+def dump_word2vec(data,vec_len,filepath):
+    _word2vec = {}
+    corpus = []
+    raw_corpus = list( data.ix[:,0] )
+    for cmt in raw_corpus:
+        corpus.append(list(jieba.cut(cmt.replace('\n',''))))
+    model = word2vec.Word2Vec(corpus, min_count=5, size=vec_len, workers=4)
+    for key in model.wv.vocab:
+        _word2vec[key]=model[key].tolist()
+    _word2vec['##']=[0]*vec_len
+    with open(filepath, "wb") as f:
+        pickle.dump(_word2vec, f)
+
+def load_word2vec(filepath):
+    with open(filepath, 'rb') as f:
+        _word2vec = pickle.load(f)
+    return _word2vec
+
+def c2e(label):
+    labels = ['好', '中', '差']
+    return labels.index(label) + 1
+
+def get_test(data, activity):
+    return get_train(data, activity)
+
+def get_train(data, activity):
+    train = data[data.ix[:, 1]==activity]
+    train = train.reset_index(drop=True)
+    train.ix[:, 2] = list(map(lambda label:c2e(label),train.ix[:, 2]))
+    # Balance the data
+    #train = imbalance(train,label_name,subsample_num)
+    _res=np.array( train.ix[:,[0, 2]] )
+    _data = []
+    for elem in _res:
+        _data.append((elem[0],elem[1]))
+    return _data
+def imbalance():
+    pass
+
 if __name__ == '__main__':
 
-    fileDir = '../train/'
-    train = readTrain(fileDir)
-    print(train.shape)
+    #fileDir = '../train/'
+    #train = readTrain(fileDir)
+    #print(train.shape)
+    #
+    #path = '../test/人工智能组2017决赛-0-验证数据公布3300.xlsx'
+    #test = _readTest(path)
+    #print(test.shape)
     
-    path = '../test/人工智能组2017决赛-0-验证数据公布3300.xlsx'
-    test = _readTest(path)
-    print(test.shape)
+    stopwords = get_stop_words("stopwords.txt") 
+    cutwords = "百战归来再读书!"
+    results = filter_comments(list(jieba.cut(cutwords.replace('\n',''))), stopwords)
+    print(results)
+    
+    #train = pd.read_csv('train.csv', low_memory=False, encoding='utf-8')
+    #dump_word2vec(train, vec_len=50, filepath='word2vec.pkl')
+    #_word2vec = load_word2vec(filepath='word2vec.pkl')

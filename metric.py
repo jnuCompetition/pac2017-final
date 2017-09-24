@@ -8,7 +8,7 @@
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
-def eval(y_true, y_pred, labels = ['好', '中', '差']):
+def eval(y_true, y_pred, labels):
     """
         Desc: eval predictions
         Params:
@@ -21,24 +21,40 @@ def eval(y_true, y_pred, labels = ['好', '中', '差']):
     
     num_labels = len(labels)
     matrix = confusion_matrix(y_true, y_pred, labels)
-    accuracy = float('%.2f'%(np.trace(matrix) / np.sum(matrix)))
+    if np.sum(matrix) == 0:
+        accuracy = 0.0
+    else:
+        accuracy = float('%.2f' % (np.trace(matrix) / np.sum(matrix)))
     trueNum = np.sum(matrix, axis=1)
     predNum = np.sum(matrix, axis=0)
     # Precisions
     precisions = {}
     for i in range(num_labels):
-            precisions[labels[i]] = float('%.2f'%(matrix[i][i] / predNum[i]))
+        if predNum[i] == 0:
+            precisions[labels[i]] = 0.0
+        else:
+            precisions[labels[i]] = float('%.2f' % (matrix[i][i] / predNum[i]))
     # Recalls
     recalls = {}
     for i in range(num_labels):
-            recalls[labels[i]] = float('%.2f'%(matrix[i][i] / trueNum[i]))
-    # Results
-    results = {'accuracy':accuracy,  'precisions':precisions, 'recalls':recalls}
-    return results
+        if trueNum[i] == 0:
+            recalls[labels[i]] = 0.0
+        else:
+            recalls[labels[i]] = float('%.2f' % (matrix[i][i] / trueNum[i]))
+
+    # F1-score
+    f1_score = {}
+    for label in labels:
+        precision = precisions[label]
+        recall = recalls[label]
+        if precision + recall == 0:
+            f1_score[label] = 0.0
+        else:
+            f1_score[label] = float('%.2f' % (2. * (precision * recall)/ (precision + recall)) )
+    return accuracy, f1_score, precisions, recalls
 
 if __name__ == '__main__':
+    y_true = ['0', '2', '1','1']
+    y_pred = ['0', '1', '2','0']
+    print(eval(y_true, y_pred, labels=['0','1','2']))
     
-    y_true = ['差', '中', '好', '好', '中', '差', '差']
-    y_pred = ['差', '差', '好', '中', '好', '差', '差']
-    results = eval(y_true, y_pred)
-    print(results) 
