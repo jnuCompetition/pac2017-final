@@ -52,11 +52,13 @@ def to_sample(vectors, label, embedding_dim):
         [sequence_len, embedding_dim])
     return Sample.from_ndarray(features, np.array(label))
 
-def build_model(class_num):
+def build_model(class_num,params):
+    embedding_dim = params["embedding_dim"]
+    p = params["p"]
     model = Sequential()
     if model_type.lower() == "lstm":
         model.add(Recurrent()
-                  .add(LSTM(embedding_dim, 64, p)))
+                  .add(LSTM( embedding_dim, 64, p )))
         model.add(Select(2, -1))
     elif model_type.lower() == "gru":
         model.add(Recurrent()
@@ -75,7 +77,7 @@ def map_predict_label(l):
 def map_groundtruth_label(l):
     return int(l[0] - 1)
 
-def predict(comments,embedding_dim,params):
+def activity_predict(comments, params):
     
     train_model = Model.load(params['modelpath'])
     word_to_ic = load_data(params['path_to_word_to_ic'])
@@ -93,11 +95,10 @@ def predict(comments,embedding_dim,params):
         lambda tokens_label: (pad(tokens_label[0], "##", sequence_len), tokens_label[1]))
     vector_rdd = padded_tokens_rdd.map(lambda tokens_label:
                                    ([to_vec(w, bfiltered_w2v.value,
-                                            embedding_dim) for w in
+                                            params["embedding_dim"]) for w in
                                      tokens_label[0]], tokens_label[1]))
     sample_rdd = vector_rdd.map(
-        lambda vectors_label: to_sample(vectors_label[0], vectors_label[1], embedding_dim))
-    
+        lambda vectors_label: to_sample(vectors_label[0], vectors_label[1], params["embedding_dim"]))
     # Keep order
     predictions = train_model.predict(sample_rdd)
     y_true = [str(map_groundtruth_label( s.label) ) for s in sample_rdd.collect()]
@@ -106,8 +107,9 @@ def predict(comments,embedding_dim,params):
     print(y_true)
     print(y_pred)
     print(eval(y_true, y_pred, labels=['0', '1', '2']))
+    return y_true, y_pred
 
-def saveFig(train_summary, val_summary):
+def saveFig(train_summary, val_summary, max_epoch, activity):
     train_loss = np.array(train_summary.read_scalar("Loss"))
     val_loss = np.array(val_summary.read_scalar("Loss"))
     plt.plot(train_loss[:,0], train_loss[:,1], label="curve_train_loss", color="red")
@@ -115,12 +117,12 @@ def saveFig(train_summary, val_summary):
     plt.scatter(val_loss[:,0], val_loss[:,1], label="scatter_val_loss", color='green')
     plt.title("Results")
     plt.legend()
-    plt.savefig('results.jpg')
+    plt.savefig('../imgs/'+str(activity)+'-'+str(max_epoch)+'-results.jpg')
     plt.close()
 
 def train(sc,
           batch_size,
-          sequence_len, max_words, embedding_dim, training_split,params):
+          sequence_len, max_words, training_split,max_epoch,params):
     
     print('Processing text dataset')
     raw_data = pd.read_csv(params["train"],low_memory=False,encoding='utf-8')
@@ -150,16 +152,16 @@ def train(sc,
         lambda tokens_label: (pad(tokens_label[0], "##", sequence_len), tokens_label[1]))
     vector_rdd = padded_tokens_rdd.map(lambda tokens_label:
                                        ([to_vec(w, bfiltered_w2v.value,
-                                                embedding_dim) for w in
+                                                params["embedding_dim"]) for w in
                                          tokens_label[0]], tokens_label[1]))
     sample_rdd = vector_rdd.map(
-        lambda vectors_label: to_sample(vectors_label[0], vectors_label[1], embedding_dim))
+        lambda vectors_label: to_sample(vectors_label[0], vectors_label[1], params["embedding_dim"]))
 
     train_rdd, val_rdd = sample_rdd.randomSplit(
         [training_split, 1-training_split])
 
     optimizer = Optimizer(
-        model=build_model(3),
+        model=build_model(3, params),
         training_rdd=train_rdd,
         criterion=ClassNLLCriterion(),
         end_trigger=MaxEpoch(max_epoch),
@@ -179,20 +181,22 @@ def train(sc,
     val_summary = ValidationSummary(log_dir=params["logDir"],app_name=app_name)
     optimizer.set_val_summary(val_summary)
     
-
     train_model = optimizer.optimize()
     train_model.save(params['modelpath'], True)
-    saveFig(train_summary, val_summary)
+    saveFig(train_summary, val_summary, max_epoch, params['activity'])
     print("Train over!")
 
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-a", "--action", dest="action", default="train")
-    parser.add_option("-b", "--batchSize", dest="batchSize", default="320")
+    parser.add_option("-b", "--batchSize", dest="batchSize", default="160")
     parser.add_option("-e", "--embedding_dim", dest="embedding_dim", default="50")
-    parser.add_option("-m", "--max_epoch", dest="max_epoch", default="2")
-    parser.add_option("--model", dest="model_type", default="gru")
+    parser.add_option("-m", "--max_epoch", dest="max_epoch", default="0")
+    parser.add_option("--mdl",dest="model_type", default="gru")
+
     parser.add_option("-p", "--p", dest="p", default="0.0")
+    
+    parser.add_option("--act", dest="activity", default="#")
 
     (options, args) = parser.parse_args(sys.argv)
     batch_size = int(options.batchSize)
@@ -200,28 +204,32 @@ if __name__ == "__main__":
     max_epoch = int(options.max_epoch)
     p = float(options.p)
     model_type = options.model_type
-    
+    activity = options.activity
+
     sequence_len = 50
     max_words = 1000
     training_split = 0.8
     
     params = {}
-    params['modelpath'] =           '../data/model.bigdl'
-    params["word2vec_path"] =       "../data/word2vec.pkl"
-    params["path_to_word_to_ic"]=   "../data/word_to_ic.pkl"
-    params["path_to_filtered_w2v"]= "../data/filtered_w2v.pkl"
-    params["path_to_stopwords"]=    "../data/stopwords.txt"        
-    params["train"] =               "../data/train.csv"
-    params["test"] =                "../data/test.csv"
-    params["logDir"] =              "logs/"
-    params["activity"] =            "ApplePay"
-    params["target_value"] =        ['好', '中', '差']
+    params["word2vec_path"]         =       "../data/word2vec.pkl"
+    params["path_to_word_to_ic"]    =       "../data/word_to_ic.pkl"
+    params["path_to_filtered_w2v"]  =       "../data/filtered_w2v.pkl"
+    params["path_to_stopwords"]     =       "../data/stopwords.txt"        
+    params["train"]                 =       "../data/train.csv"
+    params["test"]                  =       "../data/test.csv"
+    params["logDir"]                =       "../logs/"
+    params["activity"]              =       activity
+    params["target_value"]          =       ['好', '中', '差']
+    params["embedding_dim"]         =       embedding_dim
+    params["p"]                     =       p   
+    params['modelpath']             =       '../model/'+str(activity)+'-'+str(max_epoch)+'-model.bigdl'
+    
     if options.action == 'train':
         # Initialize env
         sc = SparkContext(appName="sa",conf=create_spark_conf())
         init_engine()
         # Train model
-        train(sc, batch_size, sequence_len, max_words, embedding_dim, training_split, params)
+        train(sc, batch_size, sequence_len, max_words, training_split, max_epoch, params)
         sc.stop()
     elif options.action == "predict":
         # Initialize env
@@ -230,5 +238,5 @@ if __name__ == "__main__":
         # Predict model
         test = pd.read_csv(params["test"])
         comments = get_test(test,params['activity'])        
-        predict(comments, embedding_dim, params)
+        activity_predict(comments, params)
         sc.stop()
