@@ -145,14 +145,40 @@ def get_train(data, activity):
     train = train.reset_index(drop=True)
     train.ix[:, 2] = list(map(lambda label:c2e(label),train.ix[:, 2]))
     # Balance the data
-    #train = imbalance(train,label_name,subsample_num)
+    train = imbalance(train, activity)
     _res=np.array( train.ix[:,[0, 2]] )
     _data = []
     for elem in _res:
         _data.append((elem[0],elem[1]))
     return _data
-def imbalance():
-    pass
+
+def imbalance(data, activity):
+    
+    data = data[ data.ix[:,1] == activity]
+    series = data.ix[:, 2].value_counts()
+    
+    mvalue = int( np.median(series) )
+    mindex = series[ series == mvalue].index[0]
+    
+    svalue = int( np.min(series) )
+    sindex = series[ series == svalue].index[0]
+
+    lvalue = int( np.max(series) )
+    lindex = series[ series == lvalue].index[0]
+
+    ldf = data[data.ix[:,2] == lindex].sample(mvalue)
+    mdf = data[data.ix[:,2] == mindex]
+    
+    # Sampling without replacement, sampling number <= total
+    sdf = data[data.ix[:,2] == sindex]
+    subsample_min = 20
+    add_sample_num = mvalue - svalue
+    for i in range(int(add_sample_num / subsample_min)):
+        _sdf = sdf.sample(subsample_min)
+        sdf = pd.concat([sdf, _sdf])
+
+    data = pd.concat([mdf,ldf,sdf]).sample( frac=1 ).reset_index(drop=True)
+    return data
 
 if __name__ == '__main__':
 
@@ -164,11 +190,13 @@ if __name__ == '__main__':
     #test = _readTest(path)
     #print(test.shape)
     
-    stopwords = get_stop_words("stopwords.txt") 
-    cutwords = "百战归来再读书!"
-    results = filter_comments(list(jieba.cut(cutwords.replace('\n',''))), stopwords)
-    print(results)
+    #stopwords = get_stop_words("stopwords.txt") 
+    #cutwords = "百战归来再读书!"
+    #results = filter_comments(list(jieba.cut(cutwords.replace('\n',''))), stopwords)
+    #print(results)
     
-    #train = pd.read_csv('train.csv', low_memory=False, encoding='utf-8')
+    train = pd.read_csv('../data/train.csv', low_memory=False, encoding='utf-8')
     #dump_word2vec(train, vec_len=50, filepath='word2vec.pkl')
     #_word2vec = load_word2vec(filepath='word2vec.pkl')
+
+    data = get_train(train, '银联62')
