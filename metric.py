@@ -51,10 +51,11 @@ def eval(y_true, y_pred, labels):
             f1_score[label] = 0.0
         else:
             f1_score[label] = float('%.2f' % (2. * (precision * recall)/ (precision + recall)) )
-    return accuracy, f1_score, precisions, recalls
+    results = {'accuracy': accuracy, 'f1_score':f1_score, 'precisions':precisions, 'recalls':recalls}
+    return results
 
 if __name__ == '__main__':
     y_true = ['0', '2', '1','1']
     y_pred = ['0', '1', '2','0']
-    print(eval(y_true, y_pred, labels=['0','1','2']))
-    
+    results = eval(y_true, y_pred, labels=['0','1','2'])
+    print(results)

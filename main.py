@@ -107,14 +107,16 @@ def predict(comments,embedding_dim,params):
     print(y_pred)
     print(eval(y_true, y_pred, labels=['0', '1', '2']))
 
-def saveFig(summary,figParams):
-    # Train results
-    loss = np.array(summary.read_scalar(figParams["scalar_name"]))
-    plt.figure(figsize = (12,12))
-    plt.plot(loss[:,0],loss[:,1],label=figParams["title"])
-    plt.xlim(0,loss.shape[0]+10)
-    plt.title(figParams["title"])
-    plt.savefig(figParams["title"]+'.jpg')
+def saveFig(train_summary, val_summary):
+    train_loss = np.array(train_summary.read_scalar("Loss"))
+    val_loss = np.array(val_summary.read_scalar("Loss"))
+    plt.plot(train_loss[:,0], train_loss[:,1], label="curve_train_loss", color="red")
+    plt.plot(val_loss[:,0], val_loss[:,1], label="curve_val_loss", color='yellow')
+    plt.scatter(val_loss[:,0], val_loss[:,1], label="scatter_val_loss", color='green')
+    plt.title("Results")
+    plt.legend()
+    plt.savefig('results.jpg')
+    plt.close()
 
 def train(sc,
           batch_size,
@@ -166,7 +168,8 @@ def train(sc,
     optimizer.set_validation(
         batch_size = batch_size,
         val_rdd = val_rdd,
-        trigger = EveryEpoch()
+        trigger = EveryEpoch(),
+        val_method = [Loss()]
     )
 
     app_name=dt.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -179,23 +182,17 @@ def train(sc,
 
     train_model = optimizer.optimize()
     train_model.save(params['modelpath'], True)
-    
-    figParams = {}
-    summary = val_summary
-    figParams["title"] = "top1"
-    figParams["scalar_name"] = "Top1Accuracy"
-    saveFig(summary,figParams)
-    
+    saveFig(train_summary, val_summary)
     print("Train over!")
 
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-a", "--action", dest="action", default="train")
-    parser.add_option("-b", "--batchSize", dest="batchSize", default="160")
+    parser.add_option("-b", "--batchSize", dest="batchSize", default="320")
     parser.add_option("-e", "--embedding_dim", dest="embedding_dim", default="50")
     parser.add_option("-m", "--max_epoch", dest="max_epoch", default="2")
     parser.add_option("--model", dest="model_type", default="gru")
-    parser.add_option("-p", "--p", dest="p", default="0.1")
+    parser.add_option("-p", "--p", dest="p", default="0.0")
 
     (options, args) = parser.parse_args(sys.argv)
     batch_size = int(options.batchSize)
@@ -231,10 +228,6 @@ if __name__ == "__main__":
         sc = SparkContext(appName="sa",conf=create_spark_conf())
         init_engine()
         # Predict model
-        sentences = [("一个严肃的问题，招行双币一卡通，VISA+银联，是否可以用卡号+有效期通过visa消费 借记卡也可以这么消费啊？太不安全了",1),
-                ("applepay只能是银联吗？ wlmouse 发表于 2016-2-26 09:57 地区变成美国，能绑外卡不。中国即可绑就像之前地区改美国也能绑银联卡一样",2),
-                ("关于目前的部分Pos机对于ApplePay闪付的一个缺陷 505597029 发表于 2016-2-22 14:54 体验写的很仔细，点赞…不过很多收银员都不会用闪>    付才是真的缺陷…",3),
-                ("Samsung Pay在中国注定干不过Apple Pay的原因 我看三星根本没想这么多。怎么样它都占据了手机器件，还有半导体芯片的上游，这个行业在他就会一直爽下去。他只要保证时刻不掉队即可。过几年几十年又出另一个苹果或者另几个，总有哪个死了，不过三星怎么都不会死。因为大家都得用它的器件。",3)]
         test = pd.read_csv(params["test"])
         comments = get_test(test,params['activity'])        
         predict(comments, embedding_dim, params)
