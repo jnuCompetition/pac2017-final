@@ -109,6 +109,27 @@ def activity_predict(comments, params):
     print(eval(y_true, y_pred, labels=['0', '1', '2']))
     return y_true, y_pred
 
+def predict(data, models, params):
+    model = {}
+    for modelname in os.listdir(models):
+        model[modelname] = models+modelname
+    activities = list(data.ix[:,1].unique())
+    
+    y_true = []
+    y_pred = []
+    for activity in activities:
+        comments = get_test(data, activity)   
+        for key in model.keys():
+            if len(key and activity) > 0:
+                params['modelpath'] = model[key]
+            true, pred = activity_predict(comments, params)
+            y_true.extend(true)
+            y_pred.extend(pred)
+    # Case study
+    print(y_true)
+    print(y_pred)
+    print(eval(y_true, y_pred, labels=['0', '1', '2']))
+
 def saveFig(train_summary, val_summary, max_epoch, activity):
     train_loss = np.array(train_summary.read_scalar("Loss"))
     val_loss = np.array(val_summary.read_scalar("Loss"))
@@ -240,3 +261,32 @@ if __name__ == "__main__":
         comments = get_test(test,params['activity'])        
         activity_predict(comments, params)
         sc.stop()
+    elif options.action == "allpredict":
+        # Predict model
+        data = pd.read_csv(params["test"])
+        modelDir = "../model/"
+        #predict(data, modelDir, params)
+        
+        model = {}
+        for modelname in os.listdir(modelDir):
+            model[modelname] = modelDir+modelname
+        activities = list(data.ix[:,1].unique())
+        
+        y_true = []
+        y_pred = []
+        for i in range( len(activities) ):
+            comments = get_test(data, activities[i])   
+            for key in model.keys():
+                if activities[i] in key:
+                    params['modelpath'] = model[key]
+                    sc = SparkContext(appName=activities[i],conf=create_spark_conf())
+                    init_engine()
+                    true, pred = activity_predict(comments, params)
+                    sc.stop() 
+                    y_true.extend(true)
+                    y_pred.extend(pred)
+        # Case study
+        print(y_true)
+        print(y_pred)
+        print(eval(y_true, y_pred, labels=['0', '1', '2']))
+
