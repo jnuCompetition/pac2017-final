@@ -110,6 +110,7 @@ def filter_comments(cutwords,stopwords):
 def dump_data(data, filepath):
     with open(filepath, 'wb') as f:
         pickle.dump(data, f)
+
 def load_data(filepath):
     with open(filepath, 'rb') as f:
         data = pickle.load(f)
@@ -137,15 +138,16 @@ def c2e(label):
     labels = ['好', '中', '差']
     return labels.index(label) + 1
 
-def get_test(data, activity):
-    return get_train(data, activity)
+def get_test(data, activity, _imbalance=False):
+    return get_train(data, activity, _imbalance)
 
-def get_train(data, activity):
+def get_train(data, activity, _imbalance=True):
     train = data[data.ix[:, 1]==activity]
     train = train.reset_index(drop=True)
     train.ix[:, 2] = list(map(lambda label:c2e(label),train.ix[:, 2]))
     # Balance the data
-    train = imbalance(train, activity)
+    if _imbalance == True:
+        train = imbalance(train, activity)
     _res=np.array( train.ix[:,[0, 2]] )
     _data = []
     for elem in _res:

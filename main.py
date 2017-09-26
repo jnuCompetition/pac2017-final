@@ -274,7 +274,7 @@ if __name__ == "__main__":
         sc = SparkContext(appName="sa",conf=create_spark_conf())
         init_engine()
         data = pd.read_csv(params["test"])
-        modelDir = "../model/"
+        modelDir = "../model/chs-60/"
         predict(data, modelDir, params)
         sc.stop()
 
