@@ -154,7 +154,7 @@ def train(sc,
     
     print('Processing text dataset')
     raw_data = pd.read_csv(params["train"],low_memory=False,encoding='utf-8')
-    texts = get_train(raw_data,activity=params['activity'])
+    texts = get_train(raw_data,activity=params['activity'], _imbalance=True,sample_num=params['sample_num'][ params['activity'] ])
     
     stopwords = get_stop_words(params["path_to_stopwords"])
     data_rdd = sc.parallelize(texts, 2)
@@ -238,6 +238,11 @@ if __name__ == "__main__":
     max_words = 1000
     training_split = 0.8
     
+    sample_num = {'ApplePay': 1000,
+                  '银联钱包': 1000,
+                  '银联62'  : 1000,
+                  '云闪付'  : 1000,
+                  '其他'    : 1000}
     params = {}
     params["word2vec_path"]         =       "../data/word2vec.pkl"
     params["path_to_word_to_ic"]    =       "../data/word_to_ic.pkl"
@@ -250,8 +255,9 @@ if __name__ == "__main__":
     params["target_value"]          =       ['好', '中', '差']
     params["embedding_dim"]         =       embedding_dim
     params["p"]                     =       p   
-    params['modelpath']             =       '../model/'+str(activity)+'-'+str(max_epoch)+'-model.bigdl'
-    
+    params["modelpath"]             =       '../model/'+str(activity)+'-'+str(max_epoch)+'-model.bigdl'
+    params["sample_num"]            =       sample_num
+
     if options.action == 'train':
         # Initialize env
         sc = SparkContext(appName="sa",conf=create_spark_conf())
