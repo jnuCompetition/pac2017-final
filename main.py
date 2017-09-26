@@ -133,7 +133,14 @@ def predict(data, models, params):
 def saveFig(train_summary, val_summary, max_epoch, activity):
     train_loss = np.array(train_summary.read_scalar("Loss"))
     val_loss = np.array(val_summary.read_scalar("Loss"))
+    
     plt.plot(train_loss[:,0], train_loss[:,1], label="curve_train_loss", color="red")
+    
+    min_idx = np.argmin(val_loss[:,1])
+    plt.plot(min_idx, train_loss[min_idx][1], 'kx')
+    show_min='['+str(min_idx) + ',' + str( float('%.3f' % val_loss[min_idx][1]) ) + ']'
+    plt.annotate(show_min, xytext=(min_idx, val_loss[min_idx][1]), xy=(min_idx, val_loss[min_idx][1]))
+    
     plt.plot(val_loss[:,0], val_loss[:,1], label="curve_val_loss", color='yellow')
     plt.scatter(val_loss[:,0], val_loss[:,1], label="scatter_val_loss", color='green')
     plt.title("Results")
