@@ -137,9 +137,7 @@ def saveFig(train_summary, val_summary, max_epoch, activity):
     plt.plot(train_loss[:,0], train_loss[:,1], label="curve_train_loss", color="red")
     
     min_idx = np.argmin(val_loss[:,1])
-    plt.plot(min_idx, train_loss[min_idx][1], 'kx')
-    show_min='['+str(min_idx) + ',' + str( float('%.3f' % val_loss[min_idx][1]) ) + ']'
-    plt.annotate(show_min, xytext=(min_idx, val_loss[min_idx][1]), xy=(min_idx, val_loss[min_idx][1]))
+    min_value = float('%.3f' % val_loss[min_idx][1])
     
     plt.plot(val_loss[:,0], val_loss[:,1], label="curve_val_loss", color='yellow')
     plt.scatter(val_loss[:,0], val_loss[:,1], label="scatter_val_loss", color='green')
@@ -147,6 +145,8 @@ def saveFig(train_summary, val_summary, max_epoch, activity):
     plt.legend()
     plt.savefig('../imgs/'+str(activity)+'-'+str(max_epoch)+'-results.jpg')
     plt.close()
+    results = {'Epoch:': min_idx, 'Loss:': min_value}
+    return results
 
 def train(sc,
           batch_size,
@@ -211,8 +211,10 @@ def train(sc,
     
     train_model = optimizer.optimize()
     train_model.save(params['modelpath'], True)
-    saveFig(train_summary, val_summary, max_epoch, params['activity'])
-    print("Train over!")
+    results = saveFig(train_summary, val_summary, max_epoch, params['activity'])
+    
+    print('-'*50 + '\n' + str( results ) + '\n'+'-'*50)
+    
 
 if __name__ == "__main__":
     parser = OptionParser()
