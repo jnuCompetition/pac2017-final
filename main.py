@@ -145,7 +145,7 @@ def saveFig(train_summary, val_summary, max_epoch, activity):
     plt.legend()
     plt.savefig('../imgs/'+str(activity)+'-'+str(max_epoch)+'-results.jpg')
     plt.close()
-    results = {'Epoch:': min_idx, 'Loss:': min_value}
+    results = {'Epoch': min_idx, 'Loss': min_value}
     return results
 
 def train(sc,
@@ -212,9 +212,7 @@ def train(sc,
     train_model = optimizer.optimize()
     train_model.save(params['modelpath'], True)
     results = saveFig(train_summary, val_summary, max_epoch, params['activity'])
-    
     print('-'*50 + '\n' + str( results ) + '\n'+'-'*50)
-    
 
 if __name__ == "__main__":
     parser = OptionParser()
@@ -258,7 +256,7 @@ if __name__ == "__main__":
         # Initialize env
         sc = SparkContext(appName="sa",conf=create_spark_conf())
         init_engine()
-        # Train model
+        # Train model and choose parameters
         train(sc, batch_size, sequence_len, max_words, training_split, max_epoch, params)
         sc.stop()
     elif options.action == "predict":
