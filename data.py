@@ -139,23 +139,66 @@ def c2e(label):
     return labels.index(label) + 1
 
 def get_test(data, activity, _imbalance=False):
-    return get_train(data, activity, _imbalance)
+    # Don't sampling which make test, so make sample_num equals 0
+    return get_train(data, activity, _imbalance, sample_num=0)
 
-def get_train(data, activity, _imbalance=True):
+def get_train(data, activity, _imbalance, sample_num):
     train = data[data.ix[:, 1]==activity]
     train = train.reset_index(drop=True)
     train.ix[:, 2] = list(map(lambda label:c2e(label),train.ix[:, 2]))
     # Balance the data
     if _imbalance == True:
-        train = imbalance(train, activity)
+        #train = imbalance_0(train, activity, sample_num)
+        #train = imbalance_1(train, activity)
+        train = imbalance_2(train, activity)
+        print(train.ix[:,2].value_counts())
     _res=np.array( train.ix[:,[0, 2]] )
     _data = []
     for elem in _res:
         _data.append((elem[0],elem[1]))
     return _data
 
-def imbalance(data, activity):
+def imbalance_0(data, activity, sample_num):
+    """
+        Desc: sampling data from 3 classes according to the specific sample               number, make the ratio of 3 class equals 1:1:1
+    """
+    data = data[ data.ix[:,1] == activity]
+    series = data.ix[:, 2].value_counts()
+    mvalue = int( np.median(series) )
+    mindex = series[ series == mvalue].index[0]
     
+    svalue = int( np.min(series) )
+    sindex = series[ series == svalue].index[0]
+
+    lvalue = int( np.max(series) )
+    lindex = series[ series == lvalue].index[0]
+
+    ldf = data[data.ix[:,2] == lindex].sample(sample_num)
+    
+    mdf = data[data.ix[:,2] == mindex] # 好
+    subsample_min = 20
+    add_sample_num = sample_num - mvalue
+    for i in range(int(add_sample_num / subsample_min)):
+        _mdf = mdf.sample(subsample_min)
+        mdf = pd.concat([mdf, _mdf])
+    
+    # Sampling without replacement, sampling number <= total
+    sdf = data[data.ix[:,2] == sindex]
+    subsample_min = 20
+    add_sample_num = sample_num - svalue
+    for i in range(int(add_sample_num / subsample_min)):
+        _sdf = sdf.sample(subsample_min)
+        sdf = pd.concat([sdf, _sdf])
+
+    data = pd.concat([mdf,ldf,sdf]).sample( frac=1 ).reset_index(drop=True)
+    return data
+
+def imbalance_1(data, activity):
+    """
+        Desc: sampling data from '中'(downsampling) and '差'(upsampling) acc              ording to the number of '好', make the ratio of 3 class equals              1:1:1
+    """
+    data = data[ data.ix[:,1] == activity]
+    series = data.ix[:, 2].value_counts()
     data = data[ data.ix[:,1] == activity]
     series = data.ix[:, 2].value_counts()
     
@@ -169,7 +212,7 @@ def imbalance(data, activity):
     lindex = series[ series == lvalue].index[0]
 
     ldf = data[data.ix[:,2] == lindex].sample(mvalue)
-    mdf = data[data.ix[:,2] == mindex]
+    mdf = data[data.ix[:,2] == mindex] # '好'
     
     # Sampling without replacement, sampling number <= total
     sdf = data[data.ix[:,2] == sindex]
@@ -179,6 +222,43 @@ def imbalance(data, activity):
         _sdf = sdf.sample(subsample_min)
         sdf = pd.concat([sdf, _sdf])
 
+    data = pd.concat([mdf,ldf,sdf]).sample( frac=1 ).reset_index(drop=True)
+    return data
+
+def imbalance_2(data, activity):
+    """
+        Desc: sampling data from '中'(downsampling) and '差'(upsampling) acc              ording to the number of '好', make the ratio of 3 class equals              1:1:1
+    """
+    data = data[ data.ix[:,1] == activity]
+    series = data.ix[:, 2].value_counts()
+    data = data[ data.ix[:,1] == activity]
+    series = data.ix[:, 2].value_counts()
+    
+    mvalue = int( np.median(series) )
+    mindex = series[ series == mvalue].index[0]
+    
+    svalue = int( np.min(series) )
+    sindex = series[ series == svalue].index[0]
+
+    lvalue = int( np.max(series) )
+    lindex = series[ series == lvalue].index[0]
+
+    ldf = data[data.ix[:,2] == lindex]
+    
+    mdf = data[data.ix[:,2] == mindex]
+    subsample_min = 20
+    add_sample_num = lvalue - mvalue
+    for i in range(int(add_sample_num / subsample_min)):
+        _mdf = mdf.sample(subsample_min)
+        mdf = pd.concat([mdf, _mdf])
+    
+    sdf = data[data.ix[:,2] == sindex]
+    subsample_min = 20
+    add_sample_num = lvalue - svalue
+    for i in range(int(add_sample_num / subsample_min)):
+        _sdf = sdf.sample(subsample_min)
+        sdf = pd.concat([sdf, _sdf])
+    
     data = pd.concat([mdf,ldf,sdf]).sample( frac=1 ).reset_index(drop=True)
     return data
 
