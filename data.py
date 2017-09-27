@@ -149,8 +149,7 @@ def get_train(data, activity, _imbalance, sample_num):
     # Balance the data
     if _imbalance == True:
         #train = imbalance_0(train, activity, sample_num)
-        #train = imbalance_1(train, activity)
-        train = imbalance_2(train, activity)
+        train = imbalance_3(train, activity)
         print(train.ix[:,2].value_counts())
     _res=np.array( train.ix[:,[0, 2]] )
     _data = []
@@ -255,6 +254,46 @@ def imbalance_2(data, activity):
     sdf = data[data.ix[:,2] == sindex]
     subsample_min = 20
     add_sample_num = lvalue - svalue
+    for i in range(int(add_sample_num / subsample_min)):
+        _sdf = sdf.sample(subsample_min)
+        sdf = pd.concat([sdf, _sdf])
+    
+    data = pd.concat([mdf,ldf,sdf]).sample( frac=1 ).reset_index(drop=True)
+    return data
+
+def imbalance_3(data, activity):
+    """
+        Desc: sampling data from '好'(upsampling) and '差'(upsampling) acc              ording to the number of '中', make the ratio of 3 class equals              1:2:1('好', '中', '差')
+    """
+    data = data[ data.ix[:,1] == activity]
+    series = data.ix[:, 2].value_counts()
+    data = data[ data.ix[:,1] == activity]
+    series = data.ix[:, 2].value_counts()
+    
+    mvalue = int( np.median(series) )
+    mindex = series[ series == mvalue].index[0]
+    
+    svalue = int( np.min(series) )
+    sindex = series[ series == svalue].index[0]
+
+    lvalue = int( np.max(series) )
+    lindex = series[ series == lvalue].index[0]
+
+    ldf = data[data.ix[:,2] == lindex]
+    
+    mdf = data[data.ix[:,2] == mindex]
+    
+    subsample_min = 20
+    subsample_max = ldf.shape[0] * 0.5
+    
+    add_sample_num = subsample_max - mvalue
+    for i in range(int(add_sample_num / subsample_min)):
+        _mdf = mdf.sample(subsample_min)
+        mdf = pd.concat([mdf, _mdf])
+    
+    sdf = data[data.ix[:,2] == sindex]
+    subsample_min = 20
+    add_sample_num = subsample_max - svalue
     for i in range(int(add_sample_num / subsample_min)):
         _sdf = sdf.sample(subsample_min)
         sdf = pd.concat([sdf, _sdf])

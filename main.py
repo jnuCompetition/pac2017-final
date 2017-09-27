@@ -62,12 +62,12 @@ def build_model(class_num,params):
         model.add(Select(2, -1))
     elif model_type.lower() == "gru":
         model.add(Recurrent()
-                  .add(GRU(embedding_dim, 64, p)))
+                  .add(GRU(embedding_dim, 16, p)))
         model.add(Select(2, -1))
     else:
         raise ValueError('model can only be lstm, or gru')
 
-    model.add(Linear(64, 100))
+    model.add(Linear(16, 100))
     model.add(Linear(100, class_num))
     model.add(LogSoftMax())
     return model
@@ -114,7 +114,8 @@ def predict(data, models, params):
     for modelname in os.listdir(models):
         model[modelname] = models+modelname
     activities = list(data.ix[:,1].unique())
-    
+    # Delete '其他' 
+    #activities.remove('其他')
     y_true = []
     y_pred = []
     for i in range( len(activities) ):
@@ -239,10 +240,10 @@ if __name__ == "__main__":
     training_split = 0.8
     
     sample_num = {'ApplePay': 1000,
-                  '银联钱包': 1000,
-                  '银联62'  : 1000,
+                  '银联钱包': 1200,
+                  '银联62'  : 200,
                   '云闪付'  : 1000,
-                  '其他'    : 1000}
+                  '其他'    : 400}
     params = {}
     params["word2vec_path"]         =       "../data/word2vec.pkl"
     params["path_to_word_to_ic"]    =       "../data/word_to_ic.pkl"
@@ -280,7 +281,7 @@ if __name__ == "__main__":
         sc = SparkContext(appName="sa",conf=create_spark_conf())
         init_engine()
         data = pd.read_csv(params["test"])
-        modelDir = "../model/chs-60/"
+        modelDir = "../model/chs/"
         predict(data, modelDir, params)
         sc.stop()
 
