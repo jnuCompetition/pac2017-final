@@ -357,7 +357,15 @@ if __name__ == '__main__':
     #print(results)
     
     train = pd.read_csv('../data/train.csv', low_memory=False, encoding='utf-8')
-    #dump_word2vec(train, vec_len=50, filepath='word2vec.pkl')
-    #_word2vec = load_word2vec(filepath='word2vec.pkl')
+    activities = ['ApplePay', '银联钱包', '银联62', '云闪付', '其他']
+    
+    # Get word dict from all samples
+    dump_word2vec(train, vec_len=50, filepath='All.pkl')
+    
+    # Get word dict from each sample
+    for activity in activities:
+        _train = train[train.ix[:,1] == activity]
+        dump_word2vec(_train, vec_len=50, filepath=activity+'.pkl')
+        #_word2vec = load_word2vec(filepath='word2vec.pkl')
 
-    data = get_train(train, '银联62')
+    # data = get_train(train, '银联62')
