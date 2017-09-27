@@ -104,8 +104,8 @@ def activity_predict(comments, params):
     y_true = [str(map_groundtruth_label( s.label) ) for s in sample_rdd.collect()]
     y_pred = [str(map_predict_label( s )) for s in predictions.collect()]
     # Case study
-    print(y_true)
-    print(y_pred)
+    #print(y_true)
+    #print(y_pred)
     print(eval(y_true, y_pred, labels=['0', '1', '2']))
     return y_true, y_pred
 
@@ -115,7 +115,7 @@ def predict(data, models, params):
         model[modelname] = models+modelname
     activities = list(data.ix[:,1].unique())
     # Delete '其他' 
-    #activities.remove('其他')
+    activities.remove('其他')
     y_true = []
     y_pred = []
     for i in range( len(activities) ):
@@ -127,8 +127,8 @@ def predict(data, models, params):
                 y_true.extend(true)
                 y_pred.extend(pred)
     # Case study
-    print(y_true)
-    print(y_pred)
+    #print(y_true)
+    #print(y_pred)
     print(eval(y_true, y_pred, labels=['0', '1', '2']))
 
 def saveFig(train_summary, val_summary, max_epoch, activity):
